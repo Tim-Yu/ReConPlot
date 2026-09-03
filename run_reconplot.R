@@ -8,11 +8,11 @@
 ## generic, so supporting a new caller means adding one parser file.
 ##
 ## Examples
-##   ./run_reconplot.R --source savana \
+##   ./run_reconplot.R --cn-source savana --sv-source savana \
 ##       --input  /path/to/savana/sample \
 ##       --outdir /path/to/ReConPlot_output
 ##
-##   ./run_reconplot.R --source savana --input DIR --outdir OUT \
+##   ./run_reconplot.R --cn-source wakhan --sv-source severus --input DIR --outdir OUT \
 ##       --regions "chr8,chr17:0-30000000" --layout together --genes MYC,TP53
 ## ---------------------------------------------------------------------------
 
@@ -38,7 +38,7 @@ load_parsers(file.path(SCRIPT_DIR, "R", "parsers"))
 ## --- options ----------------------------------------------------------------
 option_list <- list(
   make_option("--source", type = "character", default = "savana",
-              help = "Input caller/parser [default %default]"),
+              help = "Single parser for CN+SVs; prefer --cn-source/--sv-source for mixed callers [default %default]"),
   make_option("--cn-source", type = "character", default = NULL,
               help = "Parser for copy number only (e.g. ascat); overrides --source"),
   make_option("--sv-source", type = "character", default = NULL,

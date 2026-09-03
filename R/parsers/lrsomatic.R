@@ -1,8 +1,9 @@
 ## ---------------------------------------------------------------------------
-## parsers/lrsomatic.R -- convenience wrapper for IntGenomicsLab/lrsomatic.
+## parsers/lrsomatic.R -- legacy ASCAT+Severus lrsomatic convenience wrapper.
 ##
-## The pipeline calls CN and SVs with two different tools, so this parser is
-## just directory resolution on top of the ascat and severus components:
+## lrsomatic can run different CN/SV callers. Prefer naming those callers
+## explicitly with --cn-source/--sv-source. This wrapper remains as the original
+## ASCAT+Severus shortcut:
 ##
 ##   <sample_dir>/ascat/                        -> parsers/ascat.R    (CN)
 ##   <sample_dir>/variants/severus/somatic_SVs/ -> parsers/severus.R  (SVs)
@@ -11,6 +12,9 @@
 ##   --cn-source ascat --cn-input <sample_dir>/ascat \
 ##   --sv-source severus --sv-input <sample_dir>/variants/severus
 ##
+## For Wakhan CN from the same lrsomatic run, use:
+##   --cn-source wakhan --sv-source severus --input <sample_dir>
+##
 ## --input accepts the per-sample directory (output/P215003155), the pipeline
 ## outdir (output/, when it holds exactly one sample), or the run directory
 ## containing output/.
@@ -18,7 +22,7 @@
 
 #' Resolve --input to an lrsomatic per-sample directory.
 lrsomatic_sample_dir <- function(dir, sample = NULL) {
-  if (is.null(dir)) stop("--source lrsomatic needs --input")
+  if (is.null(dir)) stop("ASCAT+Severus lrsomatic shortcut needs --input")
   is_sample_dir <- function(d) dir.exists(file.path(d, "ascat")) ||
     dir.exists(file.path(d, "variants", "severus"))
 
@@ -69,5 +73,5 @@ parse_lrsomatic <- function(args) {
 }
 
 register_parser("lrsomatic", parse_lrsomatic,
-                "lrsomatic pipeline: ASCAT copy number + Severus somatic SVs",
+                "Legacy lrsomatic shortcut: ASCAT copy number + Severus somatic SVs",
                 provides = c("cn", "sv"))

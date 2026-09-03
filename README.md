@@ -12,14 +12,15 @@ split so that supporting a new caller means writing one small parser file.
                  --[ R/utils_common.R validate ]-->  ReConPlot::ReConPlot()
 ```
 
-A parser may supply both tables (SAVANA) or just one (ASCAT supplies CN,
+A parser may supply both tables (SAVANA) or just one (ASCAT/Wakhan supply CN,
 Severus supplies SVs). Components compose on the command line, so any CN caller
-pairs with any SV caller:
+pairs with any SV caller. Prefer explicit caller composition when a pipeline can
+run several CN/SV tools:
 
 ```bash
---source lrsomatic                          # convenience wrapper
---cn-source ascat --sv-source severus       # the same thing, explicit
---cn-source savana --sv-source severus      # mix and match
+--cn-source ascat --sv-source severus       # lrsomatic ASCAT CN + Severus SVs
+--cn-source wakhan --sv-source severus      # lrsomatic Wakhan CN + Severus SVs
+--cn-source savana --sv-source savana       # SAVANA CN + SAVANA SVs
 ```
 
 ## Layout
@@ -33,11 +34,13 @@ pairs with any SV caller:
 | `R/parsers/registry.R` | `register_parser()` plug-in table + source composition |
 | `R/parsers/savana.R` | SAVANA (CN + SVs) |
 | `R/parsers/ascat.R` | ASCAT allele-specific copy number (CN only) |
+| `R/parsers/wakhan.R` | Wakhan allele-specific copy number (CN only) |
 | `R/parsers/severus.R` | Severus long-read somatic SVs (SVs only) |
-| `R/parsers/lrsomatic.R` | lrsomatic pipeline = ASCAT + Severus |
+| `R/parsers/lrsomatic.R` | Legacy lrsomatic shortcut = ASCAT + Severus |
 | `R/parsers/generic.R` | Any caller, via explicit files + column auto-mapping |
 | `examples/run_3155.sh` | Worked example: SAVANA on P215003155 |
-| `examples/run_lrsomatic_3155.sh` | Worked example: lrsomatic on P215003155 |
+| `examples/run_lrsomatic_3155.sh` | Worked example: lrsomatic ASCAT+Severus on P215003155 |
+| `examples/run_lrsomatic_wakhan_3155.sh` | Worked example: lrsomatic Wakhan+Severus on P215003155 |
 
 ## The two data contracts
 
@@ -57,12 +60,12 @@ inter-chromosomal junctions as `TRA`.
 ./run_reconplot.R --list-sources
 
 # whole-genome, one PDF+PNG per chromosome
-./run_reconplot.R --source savana \
+./run_reconplot.R --cn-source savana --sv-source savana \
   --input  /mnt/scratch/BYU/6.savana/data/3155 \
   --outdir /mnt/scratch/BYU/6.savana/data/ReConPlot_output/P215003155_tumor
 
 # a focused multi-panel figure with gene labels
-./run_reconplot.R --source savana --input DIR --outdir OUT \
+./run_reconplot.R --cn-source savana --sv-source savana --input DIR --outdir OUT \
   --regions "chr8,chr17:30000000-50000000" --layout together \
   --genes MYC,TP53,ERBB2
 ```
@@ -71,7 +74,7 @@ inter-chromosomal junctions as `TRA`.
 
 | Option | Meaning |
 |---|---|
-| `--source` | Parser to use (`savana`, `lrsomatic`, `generic`) |
+| `--source` | Single parser for both CN and SVs (`savana`, `generic`; `lrsomatic` remains as an ASCAT+Severus shortcut) |
 | `--cn-source` / `--sv-source` | Compose a CN parser with an SV parser |
 | `--input` | Caller output directory; files are discovered inside |
 | `--cn-input` / `--sv-input` | Per-component directories when they differ |
@@ -149,11 +152,19 @@ BEDPE, orientation and read support are packed into the name column
 (`ID_39590|1608bp|TUMOUR_12|--`) and are unpacked by `savana_split_bedpe_name()`.
 The BEDPE and VCF paths were checked to yield identical junction sets.
 
-## lrsomatic specifics (Severus + ASCAT)
+## lrsomatic specifics (Severus + ASCAT/Wakhan)
 
-`--source lrsomatic --input <outdir>/<sample>` resolves both halves itself.
-`--input` also accepts the pipeline `output/` directory or the run directory
-above it when there is only one sample.
+Use explicit caller composition for lrsomatic runs, because the pipeline may
+contain multiple CN/SV callers:
+
+```bash
+./run_reconplot.R --cn-source ascat --sv-source severus --input <outdir>/<sample> --outdir OUT
+./run_reconplot.R --cn-source wakhan --sv-source severus --input <outdir>/<sample> --outdir OUT
+```
+
+`--source lrsomatic --input <outdir>/<sample>` remains available only as the
+legacy ASCAT+Severus shortcut. `--input` also accepts the pipeline `output/`
+directory or the run directory above it when there is only one sample.
 
 ### Which files to use, and why
 
@@ -163,6 +174,8 @@ above it when there is only one sample.
 | ASCAT | `ascat/<sample>.segments.txt` | ASCAT's fitted integer allele-specific calls (`ascat.output$segments`) |
 | ASCAT | `ascat/<sample>.purityploidy.txt` | purity (aberrant cell fraction) and ploidy for the title |
 | ASCAT | `ascat/<sample>.tumour_tumourBAF.txt` | het-SNP BAF panel with `--baf-track` |
+| Wakhan | `wakhan/<solution>/bed_output/*_copynumbers_segments_HP_1.bed` + `*_HP_2.bed` | full allele-specific segmentation; total CN is HP1+HP2 and minor CN is `min(HP1, HP2)` |
+| Wakhan | `wakhan/solutions_ranks.tsv` | best-ranked solution, purity, ploidy, and confidence for the title/log |
 
 Files deliberately **not** used as the primary input:
 
